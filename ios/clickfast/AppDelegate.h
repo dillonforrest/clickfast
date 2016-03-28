@@ -12,5 +12,6 @@
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (nonatomic, strong) UIWindow *window;
+@property (nonnull, strong) NSDictionary *launchOptions;
 
 @end

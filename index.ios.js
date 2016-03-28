@@ -8,10 +8,13 @@ import React, {
   Component,
   StyleSheet,
   Text,
-  View
+  View,
+  NativeModules,
+  requireNativeComponent
 } from 'react-native';
 
 var { TouchableWithoutFeedback } = React;
+var { SkillzBridge } = NativeModules;
 
 class clickfast extends Component {
   constructor() {
@@ -25,6 +28,7 @@ class clickfast extends Component {
 
       if (newTime < 0) {
         clearInterval(id);
+        SkillzBridge.endMatch(this.state.clicks);
       } else {
         this.setState({ time: newTime });
       }

@@ -8,15 +8,25 @@
  */
 
 #import "AppDelegate.h"
-
 #import "RCTRootView.h"
+#import "RCTViewManager.h"
+#import <Skillz/Skillz.h>
 
 @implementation AppDelegate
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+- (NSUInteger)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window
 {
-  NSURL *jsCodeLocation;
+  return UIInterfaceOrientationMaskPortrait;
+}
 
+- (void)tournamentWillBegin:(NSDictionary *)gameParameters
+              withMatchInfo:(SKZMatchInfo *)matchInfo
+{
+  NSLog(@"Game Parameters: %@", gameParameters);
+  NSLog(@"Now starting a game…");
+  
+  NSURL *jsCodeLocation;
+  
   /**
    * Loading JavaScript code - uncomment the one you want.
    *
@@ -30,9 +40,9 @@
    * `inet` value under `en0:`) and make sure your computer and iOS device are
    * on the same Wi-Fi network.
    */
-
+  
   jsCodeLocation = [NSURL URLWithString:@"http://localhost:8081/index.ios.bundle?platform=ios&dev=true"];
-
+  
   /**
    * OPTION 2
    * Load from pre-bundled file on disk. The static bundle is automatically
@@ -40,20 +50,79 @@
    * running the project on an actual device or running the project on the
    * simulator in the "Release" build configuration.
    */
-
-//   jsCodeLocation = [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
-
+  
+  //   jsCodeLocation = [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
+  
   RCTRootView *rootView = [[RCTRootView alloc] initWithBundleURL:jsCodeLocation
                                                       moduleName:@"clickfast"
                                                initialProperties:nil
-                                                   launchOptions:launchOptions];
-
+                                                   launchOptions:self.launchOptions];
+  
   self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
   UIViewController *rootViewController = [UIViewController new];
   rootViewController.view = rootView;
   self.window.rootViewController = rootViewController;
   [self.window makeKeyAndVisible];
+}
+
+- (void)skillzWillExit
+{
+  NSLog(@"Skillz exited.");
+}
+
+- (SkillzOrientation)preferredSkillzInterfaceOrientation
+{
+  return SkillzPortrait;
+}
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+  
+  /**
+   * skillz init
+   */
+  
+  self.launchOptions = launchOptions;
+  
+  NSLog(@"init skillz");
+#ifdef SANDBOX
+  [[Skillz skillzInstance] initWithGameId:@"1682" forDelegate:self withEnvironment:SkillzSandbox allowExit:NO];
+#else
+  [[Skillz skillzInstance] initWithGameId:@"1682" forDelegate:self withEnvironment:SkillzProduction allowExit:NO];
+#endif
+  
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [[Skillz skillzInstance] launchSkillz];
+  });
+  
   return YES;
+}
+
+@end
+
+
+
+
+@interface SkillzBridge : RCTViewManager
+@end
+
+@implementation SkillzBridge
+
+RCT_EXPORT_MODULE()
+
+- (UIView *)view
+{
+  return [[UIView alloc] init];
+}
+
+RCT_EXPORT_METHOD(endMatch:(NSNumber *)score)
+{
+  if ([[Skillz skillzInstance] tournamentIsInProgress]) {
+    [[Skillz skillzInstance] displayTournamentResultsWithScore:score
+                                                withCompletion:^{
+                                                  NSLog(@"Reporting score back to Skillz...");
+                                                }];
+  }
 }
 
 @end
